@@ -1,0 +1,8 @@
+# Prettier 3 reads .gitignore on its own, so node_modules and dist need no entry here.
+
+# Machine-written. npm regenerates it on every install; reformatting it is churn.
+package-lock.json
+
+# Read-only copies (see each file's header): a copy is never changed here, so this project's formatter must not judge it; only its canonical version changes.
+scripts/secrets-scan.mjs
+scripts/license-check.mjs

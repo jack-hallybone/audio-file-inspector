@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <!-- `media-src blob:` is what plays the file (an object URL that never leaves the machine); nothing else is granted beyond 'self'. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; media-src blob:; manifest-src 'self'; worker-src 'self'; child-src 'self'; frame-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Audio File Inspector</title>
+    <meta
+      name="description"
+      content="Play an audio file and see what it actually is — instant playback, and a byte-level WAV parse that declares, measures or withholds every value."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Both halves of --canvas (src/style.css); browser chrome cannot read a custom property. -->
+    <meta
+      name="theme-color"
+      content="#12151a"
+      media="(prefers-color-scheme: dark)"
+    />
+    <meta
+      name="theme-color"
+      content="#f4f5f6"
+      media="(prefers-color-scheme: light)"
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- Two static SVGs, not one with an internal @media query — that renders as nothing in several browsers. -->
+    <link
+      rel="icon"
+      href="icons/favicon-light.svg"
+      media="(prefers-color-scheme: light)"
+      type="image/svg+xml"
+    />
+    <link
+      rel="icon"
+      href="icons/favicon-dark.svg"
+      media="(prefers-color-scheme: dark)"
+      type="image/svg+xml"
+    />
+    <link
+      rel="icon"
+      href="icons/icon-192.png"
+      sizes="192x192"
+      type="image/png"
+    />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Audio File Inspector" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="nav bleed">
+      <span class="logo" data-icon="audio-lines" data-icon-size="sm"></span>
+      <h1 class="text-lg">Audio File Inspector</h1>
+      <span class="grow"></span>
+      <button id="install-btn" hidden>
+        <span data-icon="hard-drive-download" data-icon-size="xs"></span>Install
+      </button>
+      <button id="open-btn">
+        <span data-icon="folder-open" data-icon-size="xs"></span>Open…
+      </button>
+    </header>
+
+    <main class="measure stack lg">
+      <!-- A button, so the keyboard reaches it; the whole window takes a drop either way. -->
+      <button id="empty" type="button">
+        <span
+          class="drop-icon"
+          data-icon="file-audio"
+          data-icon-size="lg"
+        ></span>
+        <span class="drop-title text-xl">Open audio file</span>
+        <span class="text-muted">or drop one anywhere on this page</span>
+      </button>
+
+      <section id="player" class="stack lg" hidden>
+        <div class="stack">
+          <h2 id="filename" class="text-xl"></h2>
+          <div id="wave-wrap" title="Click to seek">
+            <canvas id="wave"></canvas>
+            <canvas id="cursor"></canvas>
+            <div id="wave-msg" class="text-muted text-md" hidden></div>
+            <div id="scan-progress"></div>
+          </div>
+          <div class="row">
+            <button
+              id="play"
+              class="icon-button lg"
+              title="Play/pause (Space)"
+              aria-label="Play"
+            ></button>
+            <span id="time" class="time text-mono text-sm text-muted"
+              >0:00.000</span
+            >
+            <input
+              id="seek"
+              type="range"
+              min="0"
+              max="10000"
+              value="0"
+              step="1"
+              aria-label="Seek"
+            />
+            <span id="dur" class="time text-mono text-sm text-muted"
+              >0:00.000</span
+            >
+            <button
+              id="autoplay"
+              aria-pressed="true"
+              title="Play automatically when a file is opened (A)"
+            >
+              Auto
+            </button>
+            <button id="loop" aria-pressed="false" title="Loop (L)">
+              <span data-icon="repeat" data-icon-size="xs"></span>Loop
+            </button>
+          </div>
+        </div>
+
+        <div id="findings" class="panel stack lg">
+          <p id="status">
+            <span id="summary"></span><span id="verdict"></span>
+          </p>
+          <ul id="issues" class="stack"></ul>
+          <button id="deep-verify" hidden></button>
+        </div>
+
+        <details id="details" class="panel">
+          <summary class="row text-label text-xs text-muted">
+            <span
+              class="chevron"
+              data-icon="chevron-down"
+              data-icon-size="xs"
+            ></span>
+            Details
+          </summary>
+          <dl id="meta" class="text-md"></dl>
+          <p id="checks" class="text-xs text-muted"></p>
+        </details>
+      </section>
+    </main>
+
+    <footer class="foot text-muted text-xs bleed">
+      <a
+        class="text-muted"
+        href="https://jack-hallybone.github.io/"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Made by Jack (and the machines)</a
+      >
+      <a
+        class="text-muted"
+        href="THIRD-PARTY-NOTICES.md"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Third-party notices</a
+      >
+      <!-- Stamped by deploy.yml's sed step, on this file, before the build runs; source always reads "v. dev". -->
+      <span id="version">v. dev</span>
+    </footer>
+
+    <div id="toast" class="panel floating toast text-md" role="status"></div>
+    <input
+      id="file-input"
+      type="file"
+      accept="audio/*,.aac,.bwf,.flac,.m4a,.mp3,.oga,.ogg,.opus,.wav,.wave,.weba"
+      hidden
+    />
+    <audio id="audio" preload="metadata"></audio>
+    <noscript>
+      <p class="noscript panel">
+        This inspector needs JavaScript: it reads the file's bytes and draws its
+        waveform in your browser. Nothing is sent anywhere.
+      </p>
+    </noscript>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

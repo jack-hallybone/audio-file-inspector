@@ -1,0 +1,4 @@
+# One rule: every text file is LF in the repository and in the working tree.
+* text=auto eol=lf
+
+*.png binary

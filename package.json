@@ -1,0 +1,37 @@
+{
+  "name": "audio-file-inspector",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "Play an audio file and see what it actually is — instant playback, and a byte-level WAV parse that declares, measures or withholds every value.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "npm run notices && node build.mjs",
+    "dev": "vite",
+    "preview": "vite preview",
+    "serve": "npm run build && npm run preview",
+    "serve:docker": "npm run build && vite preview --host 0.0.0.0",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "notices": "node scripts/notices.mjs",
+    "verify": "docker compose run --rm verify",
+    "verify:run": "npm run lint && npm run format:check && npm run build && npm test && npm run security:audit && npm run license:check && npm run secrets:scan",
+    "security:audit": "npm audit --audit-level=critical",
+    "license:check": "node scripts/license-check.mjs",
+    "secrets:scan": "node scripts/secrets-scan.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.1",
+    "globals": "17.11.0",
+    "playwright": "1.63.0",
+    "prettier": "3.9.6",
+    "vite": "8.2.1",
+    "workbox-build": "7.4.1"
+  }
+}

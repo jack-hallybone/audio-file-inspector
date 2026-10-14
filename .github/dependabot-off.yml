@@ -1,0 +1,29 @@
+# Switched off: GitHub only reads .github/dependabot.yml, so under this name Dependabot runs nothing. To switch version updates on, rename this file to dependabot.yml. Security updates don't need this file: they're a separate switch in the repository's settings.
+# While it's off, an advisory that verify's npm audit reports (only a critical one fails verify) is usually fixed by `docker compose run --rm verify npm audit fix --package-lock-only`, then verify again and commit the lockfile.
+# Before switching the images on, name Node's full version in its tag (for example 24.21.0-bookworm-slim, matching the Node inside the pinned image): with only 24 in the tag, Dependabot sees Node's security releases just as digest changes, which GitHub may suppress.
+# Dependabot bumps the playwright package and the Playwright image in separate pull requests, and the two must match, so merge them together.
+# Dependabot can't update these pins, so they're changed by hand:
+# - The Lucide icons in src/main.js's ICONS table and src/icons/ (the SVGs and the PNGs rendered from them), copied from lucide-static 1.41.0: recopy them all from one release, update the version in those files and scripts/notices.mjs.
+# - The OS release in the image tags, bookworm (Debian 12, on long-term support until 30 June 2028) and noble (Ubuntu 24.04): Dependabot only offers tags on the same release, so moving to a newer one is a hand edit to compose.yaml.
+# - The runner, ubuntu-24.04 in .github/workflows/deploy.yml: GitHub keeps it patched, but move it to a newer Ubuntu before GitHub retires it.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    # One pull request for every minor and patch bump; each major gets its own, so one breaking release can't hold back the rest.
+    groups:
+      npm:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

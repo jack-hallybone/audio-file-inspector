@@ -1,0 +1,595 @@
+/* This project's own design, independent of any shared stylesheet — a flat, cool-neutral "instrument panel" look; tokens, reset and components all live in this one file. */
+
+/* ---- Tokens ---- */
+
+:root {
+  color-scheme: light dark;
+
+  /* --canvas and --accent are baked into src/icons/*.svg, the 4 PNGs, and manifest.webmanifest's colours by hand — resync after a change. */
+  --canvas: light-dark(#f4f5f6, #12151a);
+  --surface: light-dark(#ffffff, #1a1e25);
+  --ink: light-dark(#14181d, #e7e9ec);
+  --ink-muted: light-dark(rgb(20 24 29 / 66%), rgb(231 233 236 / 70%));
+  --border: light-dark(rgb(20 24 29 / 12%), rgb(231 233 236 / 14%));
+  --control-border: light-dark(rgb(20 24 29 / 50%), rgb(231 233 236 / 50%));
+  --wash: light-dark(rgb(20 24 29 / 5%), rgb(231 233 236 / 7%));
+  --wash-strong: light-dark(rgb(20 24 29 / 10%), rgb(231 233 236 / 12%));
+
+  /* The one accent: a signal colour, not a brand colour — it marks the waveform trace and whatever is live/interactive, nothing else. */
+  --accent: light-dark(#086f7a, #5fd4dc);
+  --success: light-dark(#1b7a4d, #3ecf8e);
+  --warning: light-dark(#8a5a12, #dba334);
+  --danger: light-dark(#b7362f, #ef7b72);
+
+  --shadow-color: light-dark(#14181d, #000000);
+  --shadow-floating: 0 8px 24px rgb(from var(--shadow-color) r g b / 22%);
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Every measured value renders in this face — see the dl rule below. */
+  --font-mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-lg: 0.9375rem;
+  --text-xl: 1.0625rem;
+
+  --weight-semibold: 600;
+  --weight-bold: 600;
+
+  --space-2xs: 0.25rem;
+  --space-xs: 0.375rem;
+  --space-sm: 0.625rem;
+  --space-lg: 1.25rem;
+  --space-xl: 1.5rem;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --control-lg: 2rem;
+  --icon-xs: 1rem;
+  --icon-sm: 1.25rem;
+  --icon-md: 1.5rem;
+  --icon-lg: 1.75rem;
+
+  --duration-fast: 120ms;
+  --ease: ease;
+
+  --measure: 44rem;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ink-muted: light-dark(rgb(20 24 29 / 88%), rgb(231 233 236 / 88%));
+    --border: light-dark(rgb(20 24 29 / 40%), rgb(231 233 236 / 40%));
+    --control-border: var(--ink);
+  }
+}
+
+/* ---- Reset & base ---- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* An author rule that sets `display` always beats the UA `[hidden]{display:none}` by cascade origin regardless of specificity, so this needs `!important`. */
+[hidden] {
+  display: none !important;
+}
+
+/* The theme's own block elements this page lays out itself with flex gaps, not margins. */
+h1,
+h2,
+p,
+dl,
+dd,
+ul {
+  margin: 0;
+}
+ul {
+  padding: 0;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  line-height: 1.45;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* Sample rates, offsets and times are read against each other, and proportional digits make same-length numbers different widths. */
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2 {
+  font-family: inherit;
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+}
+header h1 {
+  font-weight: var(--weight-semibold);
+}
+
+a {
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+@media (hover: hover) {
+  a:hover {
+    text-decoration-thickness: 1.5px;
+  }
+}
+
+::selection {
+  background: rgb(from var(--accent) r g b / 0.28);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Layout utilities ---- */
+
+/* main is also `.stack` (display:flex), and a flex item's auto cross-axis margins (centering
+   it here) override `align-items: stretch` — leaving width up to shrink-to-fit content instead
+   of the container. `width: 100%` (clamped by max-width) pins it constant either way, so opening
+   "Details" and widening its content can no longer widen the page. */
+.measure {
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding: var(--space-xl) var(--space-lg);
+}
+/* Aligns a full-bleed header/footer row's content to .measure's centred column. */
+.bleed {
+  padding-inline: max(
+    var(--space-lg),
+    calc((100% - var(--measure)) / 2 + var(--space-lg))
+  );
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+
+  &.start {
+    align-items: flex-start;
+  }
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+
+  &:is(ul, ol) {
+    list-style: none;
+  }
+}
+:is(.row, .stack).lg {
+  gap: var(--space-lg);
+}
+.grow {
+  flex: 1;
+}
+
+.text-xs {
+  font-size: var(--text-xs);
+}
+.text-sm {
+  font-size: var(--text-sm);
+}
+.text-md {
+  font-size: var(--text-md);
+}
+.text-lg {
+  font-size: var(--text-lg);
+}
+.text-xl {
+  font-size: var(--text-xl);
+}
+.text-muted {
+  color: var(--ink-muted);
+}
+.text-mono {
+  font-family: var(--font-mono);
+}
+.text-sans {
+  font-family: var(--font-sans);
+}
+.text-success {
+  color: var(--success);
+}
+.text-warning {
+  color: var(--warning);
+}
+.text-danger {
+  color: var(--danger);
+}
+.text-label {
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---- Buttons & controls ---- */
+
+button {
+  font: inherit;
+  color: inherit;
+  line-height: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 0.4em 0.8em;
+  background: var(--surface);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &.icon-button {
+    padding: 0;
+    border-radius: var(--radius-md);
+    display: grid;
+    place-items: center;
+
+    &.lg {
+      width: var(--control-lg);
+      height: var(--control-lg);
+    }
+  }
+
+  /* aria-pressed carries the state for assistive tech; this is its visual. */
+  &.selected {
+    background: var(--wash-strong);
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+}
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    background-image: linear-gradient(var(--wash), var(--wash));
+  }
+}
+/* An inline <svg> reserves descender space below its baseline like a text glyph, pushing it above a button's label instead of centering. */
+button [data-icon] {
+  display: flex;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+/* ---- Disclosure ---- */
+
+details.panel {
+  padding: 0;
+}
+summary {
+  padding: var(--space-sm) var(--space-lg);
+  cursor: pointer;
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+/* Lucide's chevron-down (see the ICONS map in main.js), rotated to read as a closed/open caret. */
+summary .chevron {
+  transition: transform var(--duration-fast) var(--ease);
+  transform: rotate(-90deg);
+}
+details[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+details[open] > summary .chevron {
+  transform: rotate(0deg);
+}
+@media (hover: hover) {
+  summary:hover {
+    background: var(--wash);
+  }
+}
+
+/* ---- Panels & toast ---- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--ink);
+  padding: var(--space-lg);
+}
+.panel.floating {
+  box-shadow: var(--shadow-floating);
+}
+
+/* The only floating element this app has, so a full z-index scale is not needed. */
+#toast {
+  position: fixed;
+  z-index: 1;
+  inset-block-end: var(--space-xl);
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  max-inline-size: calc(100vw - 2 * var(--space-lg));
+  width: max-content;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+#toast.show {
+  opacity: 1;
+}
+
+.noscript {
+  margin: var(--space-lg);
+}
+
+/* ---- Header ---- */
+
+.nav {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: var(--space-lg);
+  padding-block: var(--space-sm);
+}
+/* .nav is non-wrapping by default; once Install joins Open…, the buttons may not fit one line on a narrow phone, overflowing the page. */
+header.nav {
+  flex-wrap: wrap;
+  row-gap: var(--space-xs);
+}
+.logo,
+.drop-icon {
+  color: var(--accent);
+  display: flex;
+}
+
+/* ---- Footer ---- */
+
+/* Same surface/border/padding treatment as .nav, laid out left/centre/right: the outer tracks
+   are equal `1fr`s, so the middle item sits on the true centre of the row regardless of how
+   wide the credit link or version string are. */
+.foot {
+  align-items: center;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  column-gap: var(--space-sm);
+  padding-block: var(--space-sm);
+}
+/* The quietest line in the footer: the muted tone a step lighter, 4.7:1 on --surface in light mode, still above WCAG's 4.5:1. Scaling muted's own alpha keeps its stronger prefers-contrast override. */
+.foot #version {
+  color: rgb(from var(--ink-muted) r g b / calc(alpha * 0.91));
+  justify-self: end;
+}
+@media (max-width: 30rem) {
+  .foot {
+    grid-template-columns: 1fr;
+    row-gap: var(--space-2xs);
+    text-align: center;
+  }
+  /* Repeats the #version selector so it matches that rule's specificity and overrides it. */
+  .foot > *,
+  .foot #version {
+    justify-self: center;
+  }
+}
+
+/* ---- Icons ---- */
+
+.icon {
+  block-size: var(--icon-md);
+  inline-size: var(--icon-md);
+  flex-shrink: 0;
+
+  &.xs {
+    block-size: var(--icon-xs);
+    inline-size: var(--icon-xs);
+  }
+  &.sm {
+    block-size: var(--icon-sm);
+    inline-size: var(--icon-sm);
+  }
+  &.lg {
+    block-size: var(--icon-lg);
+    inline-size: var(--icon-lg);
+  }
+}
+
+/* ---- Empty state / drop target ---- */
+
+#empty {
+  min-height: 200px;
+  margin-block: auto;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-xl);
+  border-style: dashed;
+  border-width: 2px;
+}
+.drop-title {
+  font-weight: var(--weight-semibold);
+}
+/* The whole window takes the drop, so the whole window shows it — outlining just the empty state would say nothing once a file is open. */
+body.dragover #empty,
+body.dragover #player {
+  outline: 2px dashed var(--accent);
+  outline-offset: var(--space-sm);
+  border-radius: var(--radius-lg);
+}
+/* So the box's own border joins that ring, rather than sitting inside it as a second rectangle in a different colour. */
+body.dragover #empty {
+  border-color: var(--accent);
+}
+
+/* ---- Player ---- */
+
+main {
+  flex: 1;
+}
+#filename {
+  font-weight: var(--weight-semibold);
+  word-break: break-all;
+}
+
+#wave-wrap {
+  position: relative;
+  height: 140px;
+  background: var(--wash);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+#wave-wrap canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* main.js reads the resolved `color` back off each canvas — getPropertyValue() on light-dark() returns literal text, not a usable colour. */
+#wave {
+  color: var(--accent);
+}
+/* Must stay visually distinct from --accent (the trace), or the cursor disappears into it. */
+#cursor {
+  color: var(--ink);
+}
+#scan-progress {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: 0;
+  height: 2px;
+  width: 0;
+  background: var(--accent);
+  transition: width var(--duration-fast) var(--ease);
+}
+#wave-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-lg);
+  text-align: center;
+  pointer-events: none;
+}
+
+.time {
+  min-width: 8ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+/* Its default ~240px min-width would overflow a narrow .row; this lets it shrink instead. */
+#seek {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Findings & verdict ---- */
+
+/* The whole line — measured facts and the pass/fail word alike — is one monospace readout, not prose. */
+#status {
+  font-family: var(--font-mono);
+}
+#verdict {
+  font-weight: var(--weight-semibold);
+}
+/* text-muted already carries the colour; "checking…"/"not applicable" just also need to read lighter than a real verdict. */
+#verdict.text-muted {
+  font-weight: normal;
+}
+#issues:empty,
+#verdict:empty,
+#checks:empty {
+  display: none;
+}
+/* Optical alignment for the glyph beside each finding's sentence. */
+.issue-icon {
+  flex: none;
+  display: flex;
+  padding-block-start: 0.1em;
+}
+.lv-info .issue-icon {
+  color: var(--accent);
+}
+/* Without this, a long sentence's own unwrapped width is what .row's flex-wrap measures, so the whole span jumps to a new line instead of wrapping in place. */
+.issue-text {
+  flex: 1;
+  min-width: 0;
+}
+
+#deep-verify {
+  align-self: flex-start;
+}
+
+/* ---- All header fields (the byte-level readout) ---- */
+
+dl {
+  display: grid;
+  /* A bare `max-content` column is fixed at its widest label's width and cannot shrink even
+     under pressure (unlike `auto`) — wrapping `minmax(0, …)` around both tracks lets them give
+     way instead of forcing the grid, and so the page, wider than its container. */
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  column-gap: var(--space-xl);
+  padding: 0 var(--space-lg);
+}
+dt,
+dd {
+  /* Tight enough that the hairline reads as a table, not a list of cards. */
+  padding-block: var(--space-2xs);
+  border-bottom: 1px solid var(--border);
+}
+/* :last-of-type, not :last-child — dt/dd alternate 1:1 (see metaRow), so this is always the true final row. */
+dt:last-of-type,
+dd:last-of-type {
+  border-bottom: none;
+}
+/* Coloured via text-muted/text-mono/text-sans from main.js (see metaRow) — this only adds layout and the withheld-value tell. */
+dt {
+  /* Wraps rather than forcing the (now shrinkable) column wider than the space available. */
+  overflow-wrap: break-word;
+}
+dd {
+  overflow-wrap: anywhere;
+}
+dd.withheld {
+  font-style: italic;
+}
+#checks {
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+
+/* ---- Reduced motion ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
